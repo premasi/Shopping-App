@@ -27,6 +27,12 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
 
+    void removeItem(GroceryItem item) {
+      setState(() {
+        groceryItems.remove(item);
+      });
+    }
+
     Widget content = Column(
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -34,7 +40,12 @@ class _HomeScreenState extends State<HomeScreen> {
         Expanded(
           child: ListView.builder(
             itemCount: groceryItems.length,
-            itemBuilder: (context, i) => Itemrow(groceryItem: groceryItems[i]),
+            itemBuilder: (context, i) => Dismissible(
+                onDismissed: (direction) {
+                  removeItem(groceryItems[i]);
+                },
+                key: ValueKey(groceryItems[i].id),
+                child: Itemrow(groceryItem: groceryItems[i])),
           ),
         ),
       ],
