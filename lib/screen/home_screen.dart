@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shopping_app/data/category_data.dart';
 import 'package:shopping_app/models/grocery_item.dart';
 import 'package:shopping_app/widgets/item_row.dart';
 import 'package:shopping_app/widgets/new_item.dart';
+import 'package:http/http.dart' as http;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,21 +15,59 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<GroceryItem> groceryItems = [];
+  List<GroceryItem> groceryItems = [];
+
+  @override
+  void initState() {
+    super.initState();
+    getItem();
+  }
+
+  void getItem() async {
+    final url = Uri.https(
+        'shopping-app-flutter-630fe-default-rtdb.asia-southeast1.firebasedatabase.app',
+        'shopping-list.json');
+    final response = await http.get(url);
+    final Map<String, dynamic> listData = json.decode(response.body);
+    final List<GroceryItem> tempData = [];
+    for (final item in listData.entries) {
+      final category = categories.entries
+          .firstWhere(
+              (catItem) => catItem.value.title == item.value["category"])
+          .value;
+      tempData.add(
+        GroceryItem(
+            id: item.key,
+            name: item.value['name'],
+            quantity: item.value['quantity'],
+            category: category),
+      );
+    }
+    setState(() {
+      groceryItems = tempData;
+    });
+  }
+
+  void addItem() async {
+    await Navigator.of(context).push<GroceryItem>(
+        MaterialPageRoute(builder: (ctx) => const NewItem()));
+
+    getItem();
+  }
 
   @override
   Widget build(BuildContext context) {
-    void addItem() async {
-      final newItem = await Navigator.of(context).push<GroceryItem>(
-          MaterialPageRoute(builder: (ctx) => const NewItem()));
+    // void addItem() async {
+    //   final newItem = await Navigator.of(context).push<GroceryItem>(
+    //       MaterialPageRoute(builder: (ctx) => const NewItem()));
 
-      if (newItem == null) {
-        return;
-      }
-      setState(() {
-        groceryItems.add(newItem);
-      });
-    }
+    //   if (newItem == null) {
+    //     return;
+    //   }
+    //   setState(() {
+    //     groceryItems.add(newItem);
+    //   });
+    // }
 
     void removeItem(GroceryItem item) {
       setState(() {

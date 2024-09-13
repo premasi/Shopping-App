@@ -1,7 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shopping_app/data/category_data.dart';
 import 'package:shopping_app/models/categories.dart';
-import 'package:shopping_app/models/grocery_item.dart';
+import 'package:http/http.dart' as http;
 
 class NewItem extends StatefulWidget {
   const NewItem({super.key});
@@ -16,14 +18,38 @@ class _NewItemState extends State<NewItem> {
   var enteredName = "";
   var enteredQuantity = 1;
   var selectedCategory = categories[Categories.vegetables];
-  void saveItem() {
+  void saveItem() async {
     if (formKey.currentState!.validate()) {
       formKey.currentState!.save();
-      Navigator.of(context).pop(GroceryItem(
-          id: DateTime.now().toString(),
-          name: enteredName,
-          quantity: enteredQuantity,
-          category: selectedCategory!));
+      final url = Uri.https(
+          'shopping-app-flutter-630fe-default-rtdb.asia-southeast1.firebasedatabase.app',
+          'shopping-list.json');
+      try {
+        final response = await http.post(
+          url,
+          headers: {"Content-Type": "application/json"},
+          body: json.encode({
+            'name': enteredName,
+            'quantity': enteredQuantity,
+            'category': selectedCategory!.title,
+          }),
+        );
+        // Check for successful response
+        if (response.statusCode == 200) {
+          print('Item saved successfully');
+          if (!context.mounted) return;
+          Navigator.of(context).pop();
+        } else {
+          print('Failed to save item: ${response.statusCode}');
+        }
+      } catch (error) {
+        print('Error occurred: $error');
+      }
+      // Navigator.of(context).pop(GroceryItem(
+      //     id: DateTime.now().toString(),
+      //     name: enteredName,
+      //     quantity: enteredQuantity,
+      //     category: selectedCategory!));
     }
   }
 
