@@ -16,6 +16,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<GroceryItem> groceryItems = [];
+  var isLoading = true;
+  String? error;
 
   @override
   void initState() {
@@ -28,6 +30,17 @@ class _HomeScreenState extends State<HomeScreen> {
         'shopping-app-flutter-630fe-default-rtdb.asia-southeast1.firebasedatabase.app',
         'shopping-list.json');
     final response = await http.get(url);
+    if (response.statusCode >= 400) {
+      setState(() {
+        error = "Failed to fetch data, please try again later";
+      });
+    }
+    if (response.body == 'null') {
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
     final Map<String, dynamic> listData = json.decode(response.body);
     final List<GroceryItem> tempData = [];
     for (final item in listData.entries) {
@@ -45,14 +58,49 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     setState(() {
       groceryItems = tempData;
+      isLoading = false;
     });
   }
 
   void addItem() async {
-    await Navigator.of(context).push<GroceryItem>(
+    final newItem = await Navigator.of(context).push<GroceryItem>(
         MaterialPageRoute(builder: (ctx) => const NewItem()));
 
-    getItem();
+    if (newItem == null) {
+      return;
+    }
+
+    setState(() {
+      groceryItems.add(newItem);
+    });
+  }
+
+  void removeItem(GroceryItem item) async {
+    final index = groceryItems.indexOf(item);
+    setState(() {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Item was deleted"),
+        ),
+      );
+      groceryItems.remove(item);
+    });
+    final url = Uri.https(
+        'shopping-app-flutter-630fe-default-rtdb.asia-southeast1.firebasedatabase.app',
+        'shopping-list/${item.id}.json');
+    final response = await http.delete(url);
+    if (response.statusCode >= 400) {
+      setState(() {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Failed to delete item, please try again later"),
+          ),
+        );
+        groceryItems.insert(index, item);
+      });
+    }
   }
 
   @override
@@ -68,12 +116,6 @@ class _HomeScreenState extends State<HomeScreen> {
     //     groceryItems.add(newItem);
     //   });
     // }
-
-    void removeItem(GroceryItem item) {
-      setState(() {
-        groceryItems.remove(item);
-      });
-    }
 
     Widget content = Column(
       mainAxisAlignment: MainAxisAlignment.start,
@@ -93,13 +135,21 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
 
+    if (isLoading) {
+      content = const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
     if (groceryItems.isEmpty) {
       content = const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [Text("Item still empty, add new item!")],
-        ),
+        child: Text("Item still empty, add new item!"),
+      );
+    }
+
+    if (error != null) {
+      content = Center(
+        child: Text(error!),
       );
     }
 
